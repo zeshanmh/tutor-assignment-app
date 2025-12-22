@@ -5,7 +5,7 @@ nixPkgs = ["nodejs-18_x", "python311"]
 cmds = [
   "cd frontend && npm install",
   "cd frontend && npm run build",
-  "cd backend && pip3 install --upgrade pip && pip3 install -r requirements.txt",
+  "cd backend && python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt",
   "chmod +x backend/start.sh"
 ]
 
