@@ -1,12 +1,12 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "RAILPACK"
+    "builder": "NIXPACKS"
   },
   "deploy": {
     "runtime": "V2",
     "numReplicas": 1,
-    "startCommand": "cd backend && python3 -m gunicorn app:app --bind 0.0.0.0:$PORT",
+    "startCommand": "cd backend && bash start.sh",
     "sleepApplication": false,
     "useLegacyStacker": false,
     "restartPolicyType": "ON_FAILURE",
