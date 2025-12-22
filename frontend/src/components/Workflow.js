@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import WorkflowStep1 from './WorkflowSteps/Step1UpdateStudents';
 import WorkflowStep2 from './WorkflowSteps/Step2AddStudents';
 import WorkflowStep3 from './WorkflowSteps/Step3DeleteNRTs';
