@@ -1227,16 +1227,19 @@ You can now use the email sending functionality in the workflow.
             'success': False
         }), 500
 
-# Serve React static files in production
+# Serve React static files in production (must be last to not interfere with API routes)
 if not app.config.get('DEBUG'):
     frontend_build_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
+    print(f"[INFO] Checking for frontend build at: {frontend_build_path}")
+    print(f"[INFO] Frontend build exists: {os.path.exists(frontend_build_path)}")
     if os.path.exists(frontend_build_path):
         @app.route('/', defaults={'path': ''})
         @app.route('/<path:path>')
         def serve_frontend(path):
             """Serve React app for all non-API routes"""
-            # Don't interfere with API routes
-            if path.startswith('api/'):
+            # Don't interfere with API routes - Flask should match /api/* routes first
+            # but double-check to be safe
+            if path.startswith('api/') or request.path.startswith('/api/'):
                 return jsonify({'error': 'Not found'}), 404
             
             # Serve static files if they exist
@@ -1245,6 +1248,8 @@ if not app.config.get('DEBUG'):
             
             # Serve index.html for React Router (SPA routing)
             return send_from_directory(frontend_build_path, 'index.html')
+    else:
+        print(f"[WARNING] Frontend build not found at {frontend_build_path}. Frontend will not be served.")
 
 # Error handlers for production
 @app.errorhandler(404)
@@ -1264,8 +1269,15 @@ def internal_error(error):
         }), 500
     return jsonify({'error': 'Internal server error'}), 500
 
+# Print startup info
+print(f"[STARTUP] Flask app starting...")
+print(f"[STARTUP] DEBUG mode: {app.config.get('DEBUG')}")
+print(f"[STARTUP] Database path: {app.config.get('DATABASE_PATH', 'Not set')}")
+print(f"[STARTUP] Frontend URL: {os.environ.get('FRONTEND_URL', 'Not set')}")
+
 if __name__ == '__main__':
     # Only run Flask dev server in development
     port = int(os.environ.get('PORT', 5001))
+    print(f"[STARTUP] Starting Flask dev server on port {port}")
     app.run(debug=app.config.get('DEBUG', False), host='0.0.0.0', port=port)
 
