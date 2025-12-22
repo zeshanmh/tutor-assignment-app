@@ -1,9 +1,9 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "python311"]
+nixPkgs = ["nodejs-20_x", "python311"]
 
 [phases.install]
 cmds = [
-  "cd frontend && npm ci",
+  "cd frontend && npm install",
   "cd frontend && npm run build",
   "cd backend && pip3 install --upgrade pip && pip3 install -r requirements.txt",
   "chmod +x backend/start.sh"
