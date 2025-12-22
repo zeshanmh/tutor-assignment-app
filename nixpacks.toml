@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "python311", "curl"]
+nixPkgs = ["nodejs-18_x", "python311"]
 
 [phases.install]
 cmds = [
   "cd frontend && npm install",
   "cd frontend && npm run build",
-  "cd backend && curl -sS https://bootstrap.pypa.io/get-pip.py | python3 && python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt",
+  "cd backend && python3 -m venv venv && source venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt",
   "chmod +x backend/start.sh"
 ]
 
