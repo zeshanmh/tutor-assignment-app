@@ -50,9 +50,6 @@ def initialize_app():
     except Exception as e:
         print(f"[STARTUP] Warning: Google Sheets sync initialization failed: {e}")
 
-# Initialize on import (when app module loads)
-initialize_app()
-
 def init_database():
     """Initialize database connection"""
     global db_manager
@@ -1290,6 +1287,9 @@ def internal_error(error):
             'traceback': traceback.format_exc()
         }), 500
     return jsonify({'error': 'Internal server error'}), 500
+
+# Initialize app on module load (after all functions are defined)
+initialize_app()
 
 # Print startup info
 print(f"[STARTUP] Flask app starting...")
