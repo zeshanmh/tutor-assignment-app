@@ -31,6 +31,28 @@ jwt = JWTManager(app)
 db_manager = None
 sheets_sync = None
 
+# Initialize database on app startup (not lazy)
+def initialize_app():
+    """Initialize database and sheets sync on startup"""
+    try:
+        print("[STARTUP] Initializing database...")
+        init_database()
+        print("[STARTUP] Database initialized successfully")
+    except Exception as e:
+        print(f"[STARTUP] Warning: Database initialization failed: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    try:
+        print("[STARTUP] Initializing Google Sheets sync...")
+        init_sheets_sync()
+        print("[STARTUP] Google Sheets sync initialized (if configured)")
+    except Exception as e:
+        print(f"[STARTUP] Warning: Google Sheets sync initialization failed: {e}")
+
+# Initialize on import (when app module loads)
+initialize_app()
+
 def init_database():
     """Initialize database connection"""
     global db_manager
