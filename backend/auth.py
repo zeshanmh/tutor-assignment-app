@@ -115,7 +115,8 @@ def send_verification_email(email: str, code: str) -> bool:
         msg.attach(MIMEText(body, 'plain'))
         
         print(f"Attempting to send verification email to {email} via {config['EMAIL_HOST']}:{config['EMAIL_PORT']}")
-        server = smtplib.SMTP(config['EMAIL_HOST'], config['EMAIL_PORT'])
+        # Add timeout to prevent hanging (10 seconds for connection, 15 seconds for operations)
+        server = smtplib.SMTP(config['EMAIL_HOST'], config['EMAIL_PORT'], timeout=10)
         server.starttls()
         print(f"Attempting to login with user: {config['EMAIL_USER']}")
         server.login(config['EMAIL_USER'], config['EMAIL_PASSWORD'])
@@ -129,11 +130,14 @@ def send_verification_email(email: str, code: str) -> bool:
         print(f"SMTP Authentication Error: {e}")
         print("This usually means EMAIL_PASSWORD is incorrect. For Gmail, you need an App Password, not your regular password.")
         return False
-    except smtplib.SMTPException as e:
-        print(f"SMTP Error: {e}")
+    except (smtplib.SMTPException, OSError, TimeoutError) as e:
+        print(f"SMTP Connection Error: {type(e).__name__}: {e}")
+        print("This might indicate network issues or Gmail blocking the connection from Railway.")
         return False
     except Exception as e:
         print(f"Error sending verification email: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def is_admin_email(email: str) -> bool:
