@@ -1,14 +1,12 @@
 """Authentication and authorization logic"""
 import random
 import string
-import smtplib
 import json
 import os
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 from flask import current_app
+from gmail_api_service import send_email_via_gmail
 
 # In-memory storage for verification codes (use Redis in production)
 verification_codes: Dict[str, Dict] = {}
@@ -95,45 +93,31 @@ def generate_verification_code() -> str:
     return ''.join(random.choices(string.digits, k=6))
 
 def send_verification_email(email: str, code: str) -> bool:
-    """Send verification code via email"""
+    """Send verification code via email using Gmail API"""
     try:
         config = current_app.config
         
-        msg = MIMEMultipart()
-        msg['From'] = config['EMAIL_USER']
-        msg['To'] = email
-        msg['Subject'] = 'Winthrop Tutor Assignment - Verification Code'
+        subject = 'Winthrop Tutor Assignment - Verification Code'
+        body = f"""Your verification code is: {code}
+
+This code will expire in 10 minutes.
+
+If you did not request this code, please ignore this email.
+"""
         
-        body = f"""
-        Your verification code is: {code}
+        print(f"Attempting to send verification email to {email} via Gmail API")
+        success = send_email_via_gmail(
+            to_email=email,
+            subject=subject,
+            body=body
+        )
         
-        This code will expire in 10 minutes.
+        if success:
+            print(f"Verification email sent successfully to {email}")
+        else:
+            print(f"Failed to send verification email to {email}")
         
-        If you did not request this code, please ignore this email.
-        """
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        print(f"Attempting to send verification email to {email} via {config['EMAIL_HOST']}:{config['EMAIL_PORT']}")
-        # Add timeout to prevent hanging (10 seconds for connection, 15 seconds for operations)
-        server = smtplib.SMTP(config['EMAIL_HOST'], config['EMAIL_PORT'], timeout=10)
-        server.starttls()
-        print(f"Attempting to login with user: {config['EMAIL_USER']}")
-        server.login(config['EMAIL_USER'], config['EMAIL_PASSWORD'])
-        print(f"Sending email to {email}")
-        server.send_message(msg)
-        server.quit()
-        print(f"Verification email sent successfully to {email}")
-        
-        return True
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"SMTP Authentication Error: {e}")
-        print("This usually means EMAIL_PASSWORD is incorrect. For Gmail, you need an App Password, not your regular password.")
-        return False
-    except (smtplib.SMTPException, OSError, TimeoutError) as e:
-        print(f"SMTP Connection Error: {type(e).__name__}: {e}")
-        print("This might indicate network issues or Gmail blocking the connection from Railway.")
-        return False
+        return success
     except Exception as e:
         print(f"Error sending verification email: {type(e).__name__}: {e}")
         import traceback
@@ -161,17 +145,37 @@ def request_verification_code(email: str) -> Dict[str, str]:
     
     print(f"[AUTH] Email {email} is authorized")
     
-    # Check if email configuration is set up
+    # Check if email configuration is set up (Gmail API or legacy SMTP)
     config = current_app.config
     email_user = config.get('EMAIL_USER', '')
+    
+    # Check for Gmail API credentials (preferred)
+    gmail_client_id = config.get('GMAIL_CLIENT_ID', '')
+    gmail_client_secret = config.get('GMAIL_CLIENT_SECRET', '')
+    gmail_refresh_token = config.get('GMAIL_REFRESH_TOKEN', '')
+    
+    # Check for legacy SMTP credentials (fallback)
     email_password = config.get('EMAIL_PASSWORD', '')
     
     print(f"[AUTH] EMAIL_USER: {'SET' if email_user else 'NOT SET'}")
-    print(f"[AUTH] EMAIL_PASSWORD: {'SET' if email_password else 'NOT SET'}")
+    print(f"[AUTH] GMAIL_CLIENT_ID: {'SET' if gmail_client_id else 'NOT SET'}")
+    print(f"[AUTH] GMAIL_CLIENT_SECRET: {'SET' if gmail_client_secret else 'NOT SET'}")
+    print(f"[AUTH] GMAIL_REFRESH_TOKEN: {'SET' if gmail_refresh_token else 'NOT SET'}")
+    print(f"[AUTH] Gmail API credentials: {'SET' if all([gmail_client_id, gmail_client_secret, gmail_refresh_token]) else 'NOT SET'}")
+    print(f"[AUTH] Legacy SMTP credentials: {'SET' if email_password else 'NOT SET'}")
     
-    if not email_user or not email_password:
-        print("[AUTH] ERROR: EMAIL_USER or EMAIL_PASSWORD not configured in .env file")
-        return {'error': 'Email service not configured. Please check EMAIL_USER and EMAIL_PASSWORD in .env file.'}
+    # Require either Gmail API credentials or legacy SMTP credentials
+    has_gmail_api = all([gmail_client_id, gmail_client_secret, gmail_refresh_token])
+    has_smtp = bool(email_password)
+    
+    if not email_user:
+        print("[AUTH] ERROR: EMAIL_USER not configured in .env file")
+        return {'error': 'Email service not configured. Please set EMAIL_USER in .env file.'}
+    
+    if not has_gmail_api and not has_smtp:
+        print("[AUTH] ERROR: No email credentials configured")
+        print(f"[AUTH] DEBUG: gmail_client_id={bool(gmail_client_id)}, gmail_client_secret={bool(gmail_client_secret)}, gmail_refresh_token={bool(gmail_refresh_token)}")
+        return {'error': 'Email service not configured. Please set Gmail API credentials (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN) or legacy SMTP credentials (EMAIL_PASSWORD) in .env file.'}
     
     code = generate_verification_code()
     expires_at = datetime.now() + timedelta(seconds=current_app.config.get('VERIFICATION_CODE_EXPIRES', 600))

@@ -34,6 +34,12 @@ class Config:
     ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
     
     # Email Configuration
+    # Gmail API OAuth2 credentials (preferred method, avoids IP blocking)
+    GMAIL_CLIENT_ID = os.environ.get('GMAIL_CLIENT_ID', '')
+    GMAIL_CLIENT_SECRET = os.environ.get('GMAIL_CLIENT_SECRET', '')
+    GMAIL_REFRESH_TOKEN = os.environ.get('GMAIL_REFRESH_TOKEN', '')
+    
+    # Legacy SMTP configuration (deprecated, kept for backward compatibility)
     EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
     EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
     EMAIL_USER = os.environ.get('EMAIL_USER', '')

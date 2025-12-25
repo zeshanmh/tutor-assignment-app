@@ -1,28 +1,19 @@
 """Email service for sending assignment notifications"""
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import List, Optional, Dict, Any
 from flask import current_app
 from models import Student, ResidentTutor, NonResidentTutor
+from gmail_api_service import send_email_via_gmail
 
 def send_assignment_email(student: Student, rt_email: Optional[str], nrt_email: Optional[str], 
                          email_template: Optional[str] = None, rt_name: Optional[str] = None,
                          nrt_name: Optional[str] = None) -> bool:
-    """Send assignment email to student with RT and NRT CC'd"""
+    """Send assignment email to student with RT and NRT CC'd using Gmail API"""
     try:
-        config = current_app.config
-        
         # Use primary_email if available, otherwise fall back to secondary_email
         student_email = student.primary_email or student.secondary_email
         if not student_email:
             print(f"Error: No email available for student {student.first_name} {student.last_name}")
             return False
-        
-        msg = MIMEMultipart()
-        msg['From'] = config['EMAIL_USER']
-        msg['To'] = student_email
-        msg['Subject'] = 'Winthrop Pre-Health RT & NRT Assignment'
         
         # Build CC list
         cc_emails = []
@@ -31,12 +22,11 @@ def send_assignment_email(student: Student, rt_email: Optional[str], nrt_email: 
         if nrt_email:
             cc_emails.append(nrt_email)
         
-        if cc_emails:
-            msg['Cc'] = ', '.join(cc_emails)
-        
         # Get RT and NRT names (passed as parameters)
         rt_name = rt_name or rt_email or 'TBD'
         nrt_name = nrt_name or nrt_email or 'TBD'
+        
+        subject = 'Winthrop Pre-Health RT & NRT Assignment'
         
         # Use provided template or default
         if email_template:
@@ -58,22 +48,19 @@ If you are not planning to be pre-med anymore, please let us know as soon as pos
 
 Regards,
 Winthrop House Pre-Health Committee
-            """
+"""
         
-        msg.attach(MIMEText(body, 'plain'))
-        
-        # Send to student and CC tutors
-        recipients = [student_email] + cc_emails
-        
-        server = smtplib.SMTP(config['EMAIL_HOST'], config['EMAIL_PORT'])
-        server.starttls()
-        server.login(config['EMAIL_USER'], config['EMAIL_PASSWORD'])
-        server.send_message(msg, to_addrs=recipients)
-        server.quit()
-        
-        return True
+        # Send email via Gmail API
+        return send_email_via_gmail(
+            to_email=student_email,
+            subject=subject,
+            body=body,
+            cc_emails=cc_emails if cc_emails else None
+        )
     except Exception as e:
         print(f"Error sending assignment email: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def send_bulk_assignment_emails(students: List[Student], email_template: Optional[str] = None) -> Dict[str, Any]:
@@ -98,33 +85,14 @@ def send_bulk_assignment_emails(students: List[Student], email_template: Optiona
     return results
 
 def send_email_with_cc(to_email: str, subject: str, body: str, cc_emails: List[str] = None) -> bool:
-    """Send email with CC support"""
+    """Send email with CC support using Gmail API"""
     try:
-        from flask import current_app
-        config = current_app.config
-        
-        msg = MIMEMultipart()
-        msg['From'] = config['EMAIL_USER']
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        
-        if cc_emails:
-            msg['Cc'] = ', '.join(cc_emails)
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        # Send to recipient and CC recipients
-        recipients = [to_email]
-        if cc_emails:
-            recipients.extend(cc_emails)
-        
-        server = smtplib.SMTP(config['EMAIL_HOST'], config['EMAIL_PORT'])
-        server.starttls()
-        server.login(config['EMAIL_USER'], config['EMAIL_PASSWORD'])
-        server.send_message(msg, to_addrs=recipients)
-        server.quit()
-        
-        return True
+        return send_email_via_gmail(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            cc_emails=cc_emails
+        )
     except Exception as e:
         print(f"Error sending email: {e}")
         import traceback
