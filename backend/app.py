@@ -1025,64 +1025,106 @@ def get_student_email_history(student_id):
 @admin_required
 def preview_email():
     """Preview a rendered email for a student"""
-    init_database()
-    data = request.get_json()
+    try:
+        init_database()
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        student_id = data.get('student_id')
+        template_name = data.get('template_name')  # 'With NRT' or 'Without NRT'
+        additional_cc = data.get('additional_cc', '')  # Comma-separated emails
+        
+        if not student_id or not template_name:
+            return jsonify({'error': 'student_id and template_name are required'}), 400
+        
+        # Get student
+        try:
+            students = db_manager.get_students()
+            student = next((s for s in students if s.row_index == student_id), None)
+            if not student:
+                return jsonify({'error': f'Student with ID {student_id} not found'}), 404
+        except Exception as e:
+            print(f"[EMAIL PREVIEW] Error fetching students: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Failed to fetch student data: {str(e)}'}), 500
+        
+        # Get template
+        try:
+            template = db_manager.get_email_template_by_name(template_name)
+            if not template:
+                return jsonify({'error': f'Template "{template_name}" not found. Please create it first.'}), 404
+        except Exception as e:
+            print(f"[EMAIL PREVIEW] Error fetching template: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Failed to fetch email template: {str(e)}'}), 500
+        
+        # Get RT and NRT if assigned
+        rt = None
+        nrt = None
+        try:
+            if student.rt_assignment:
+                rts = db_manager.get_rts()
+                rt = next((r for r in rts if r.name.strip().lower() == student.rt_assignment.strip().lower()), None)
+                if not rt:
+                    print(f"[EMAIL PREVIEW] Warning: RT '{student.rt_assignment}' not found for student {student_id}")
+            
+            if student.nrt_assignment:
+                nrts = db_manager.get_nrts()
+                nrt = next((n for n in nrts if n.name.strip().lower() == student.nrt_assignment.strip().lower()), None)
+                if not nrt:
+                    print(f"[EMAIL PREVIEW] Warning: NRT '{student.nrt_assignment}' not found for student {student_id}")
+        except Exception as e:
+            print(f"[EMAIL PREVIEW] Error fetching RT/NRT: {e}")
+            import traceback
+            traceback.print_exc()
+            # Continue without RT/NRT rather than failing completely
+        
+        # Render template
+        try:
+            rendered_subject = render_email_template(template.get('subject', ''), student, rt, nrt)
+            rendered_body = render_email_template(template.get('body', ''), student, rt, nrt)
+        except Exception as e:
+            print(f"[EMAIL PREVIEW] Error rendering template: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Failed to render email template: {str(e)}'}), 500
+        
+        # Determine recipients
+        student_email = student.primary_email or student.secondary_email
+        if not student_email:
+            return jsonify({'error': 'Student has no email address. Please add an email address to the student record.'}), 400
+        
+        cc_emails = []
+        try:
+            if rt and hasattr(rt, 'email') and rt.email:
+                cc_emails.append(rt.email)
+            if nrt and hasattr(nrt, 'email') and nrt.email:
+                cc_emails.append(nrt.email)
+            
+            # Add additional CC emails
+            if additional_cc:
+                additional_emails = [e.strip() for e in additional_cc.split(',') if e.strip()]
+                cc_emails.extend(additional_emails)
+        except Exception as e:
+            print(f"[EMAIL PREVIEW] Error processing CC emails: {e}")
+            # Continue without CC emails rather than failing
+        
+        return jsonify({
+            'subject': rendered_subject,
+            'body': rendered_body,
+            'to': student_email,
+            'cc': cc_emails
+        }), 200
     
-    student_id = data.get('student_id')
-    template_name = data.get('template_name')  # 'With NRT' or 'Without NRT'
-    additional_cc = data.get('additional_cc', '')  # Comma-separated emails
-    
-    if not student_id or not template_name:
-        return jsonify({'error': 'student_id and template_name are required'}), 400
-    
-    # Get student
-    students = db_manager.get_students()
-    student = next((s for s in students if s.row_index == student_id), None)
-    if not student:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    # Get template
-    template = db_manager.get_email_template_by_name(template_name)
-    if not template:
-        return jsonify({'error': f'Template "{template_name}" not found'}), 404
-    
-    # Get RT and NRT if assigned
-    rt = None
-    nrt = None
-    if student.rt_assignment:
-        rts = db_manager.get_rts()
-        rt = next((r for r in rts if r.name.strip().lower() == student.rt_assignment.strip().lower()), None)
-    
-    if student.nrt_assignment:
-        nrts = db_manager.get_nrts()
-        nrt = next((n for n in nrts if n.name.strip().lower() == student.nrt_assignment.strip().lower()), None)
-    
-    # Render template
-    rendered_subject = render_email_template(template['subject'], student, rt, nrt)
-    rendered_body = render_email_template(template['body'], student, rt, nrt)
-    
-    # Determine recipients
-    student_email = student.primary_email or student.secondary_email
-    if not student_email:
-        return jsonify({'error': 'Student has no email address'}), 400
-    
-    cc_emails = []
-    if rt and rt.email:
-        cc_emails.append(rt.email)
-    if nrt and nrt.email:
-        cc_emails.append(nrt.email)
-    
-    # Add additional CC emails
-    if additional_cc:
-        additional_emails = [e.strip() for e in additional_cc.split(',') if e.strip()]
-        cc_emails.extend(additional_emails)
-    
-    return jsonify({
-        'subject': rendered_subject,
-        'body': rendered_body,
-        'to': student_email,
-        'cc': cc_emails
-    }), 200
+    except Exception as e:
+        print(f"[EMAIL PREVIEW] Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'An unexpected error occurred while previewing email: {str(e)}'}), 500
 
 @app.route('/api/email/send-template', methods=['POST'])
 @admin_required
@@ -1143,50 +1185,93 @@ def send_student_email():
     # Send email
     try:
         from email_service import send_email_with_cc
-        send_email_with_cc(
+        
+        print(f"[SEND EMAIL] Attempting to send email to {student_email}")
+        success = send_email_with_cc(
             to_email=student_email,
             subject=rendered_subject,
             body=rendered_body,
             cc_emails=cc_emails
         )
         
-        # Save to history
-        db_manager.add_email_history(
-            student_id=student.row_index,
-            subject=rendered_subject,
-            body=rendered_body,
-            recipients=[student_email],
-            cc_recipients=cc_emails,
-            sent_by=get_jwt_identity()
-        )
+        if not success:
+            return jsonify({'error': 'Failed to send email. Check backend logs for details. This may be due to Gmail API authentication issues.'}), 500
         
+        # Save to history
+        try:
+            db_manager.add_email_history(
+                student_id=student.row_index,
+                subject=rendered_subject,
+                body=rendered_body,
+                recipients=[student_email],
+                cc_recipients=cc_emails,
+                sent_by=get_jwt_identity()
+            )
+        except Exception as e:
+            print(f"[SEND EMAIL] Warning: Failed to save email history: {e}")
+            # Don't fail the request if history save fails
+        
+        print(f"[SEND EMAIL] Email sent successfully to {student_email}")
         return jsonify({'message': 'Email sent successfully'}), 200
     except Exception as e:
-        return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
+        print(f"[SEND EMAIL] Error sending email: {e}")
+        import traceback
+        traceback.print_exc()
+        error_msg = str(e)
+        if 'RefreshError' in str(type(e)) or 'invalid_grant' in error_msg.lower():
+            return jsonify({'error': 'Gmail authentication failed. The refresh token may have expired. Please regenerate it using: python backend/setup_gmail_oauth.py'}), 500
+        return jsonify({'error': f'Failed to send email: {error_msg}'}), 500
 
 def render_email_template(template: str, student: Student, rt: ResidentTutor = None, nrt: NonResidentTutor = None) -> str:
     """Render email template with placeholders replaced"""
+    if not template:
+        return ''
+    
     rendered = template
     
-    # Student placeholders
-    rendered = rendered.replace('{Student}', f"{student.first_name} {student.last_name}")
-    rendered = rendered.replace('{StudentFirstName}', student.first_name)
-    rendered = rendered.replace('{StudentLastName}', student.last_name)
-    rendered = rendered.replace('{ClassYear}', student.class_year or '')
+    # Student placeholders - handle None values safely
+    try:
+        student_first_name = getattr(student, 'first_name', '') or ''
+        student_last_name = getattr(student, 'last_name', '') or ''
+        student_class_year = getattr(student, 'class_year', '') or ''
+        
+        rendered = rendered.replace('{Student}', f"{student_first_name} {student_last_name}".strip())
+        rendered = rendered.replace('{StudentFirstName}', student_first_name)
+        rendered = rendered.replace('{StudentLastName}', student_last_name)
+        rendered = rendered.replace('{ClassYear}', student_class_year)
+    except Exception as e:
+        print(f"[RENDER TEMPLATE] Error processing student placeholders: {e}")
+        # Continue with empty values
     
-    # RT placeholders
-    if rt:
-        rendered = rendered.replace('{RT}', rt.name)
-        rendered = rendered.replace('{RTEmail}', rt.email)
-    else:
+    # RT placeholders - handle None values safely
+    try:
+        if rt and hasattr(rt, 'name'):
+            rt_name = rt.name or ''
+            rt_email = getattr(rt, 'email', '') or ''
+        else:
+            rt_name = ''
+            rt_email = ''
+        
+        rendered = rendered.replace('{RT}', rt_name)
+        rendered = rendered.replace('{RTEmail}', rt_email)
+    except Exception as e:
+        print(f"[RENDER TEMPLATE] Error processing RT placeholders: {e}")
         rendered = rendered.replace('{RT}', '')
         rendered = rendered.replace('{RTEmail}', '')
     
-    # NRT placeholders
-    if nrt:
-        rendered = rendered.replace('{NRT}', nrt.name)
-        rendered = rendered.replace('{NRTEmail}', nrt.email)
-    else:
+    # NRT placeholders - handle None values safely
+    try:
+        if nrt and hasattr(nrt, 'name'):
+            nrt_name = nrt.name or ''
+            nrt_email = getattr(nrt, 'email', '') or ''
+        else:
+            nrt_name = ''
+            nrt_email = ''
+        
+        rendered = rendered.replace('{NRT}', nrt_name)
+        rendered = rendered.replace('{NRTEmail}', nrt_email)
+    except Exception as e:
+        print(f"[RENDER TEMPLATE] Error processing NRT placeholders: {e}")
         rendered = rendered.replace('{NRT}', '')
         rendered = rendered.replace('{NRTEmail}', '')
     

@@ -178,7 +178,8 @@ Winthrop House Pre-Health Committee`,
       setExpandedPreviews(new Set([...expandedPreviews, student.row_index]));
     } catch (err) {
       console.error('Error previewing email:', err);
-      alert('Failed to preview email');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to preview email';
+      alert(`Failed to preview email: ${errorMessage}`);
     }
   };
 
