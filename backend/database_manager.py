@@ -860,7 +860,15 @@ class DatabaseManager:
         cursor.execute(f'SELECT * FROM email_templates WHERE name = {placeholder}', (name,))
         row = cursor.fetchone()
         conn.close()
-        return dict(row) if row else None
+        # RealDictCursor already returns a dict-like object, so convert appropriately
+        if row:
+            if self.is_postgresql:
+                # RealDictRow is already dict-like
+                return dict(row)
+            else:
+                # SQLite Row needs conversion
+                return dict(row)
+        return None
     
     def add_email_template(self, name: str, subject: str, body: str):
         """Add a new email template"""
