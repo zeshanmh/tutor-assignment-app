@@ -99,11 +99,11 @@ def send_verification_email(email: str, code: str) -> bool:
         
         subject = 'Winthrop Tutor Assignment - Verification Code'
         body = f"""Your verification code is: {code}
-
-This code will expire in 10 minutes.
-
-If you did not request this code, please ignore this email.
-"""
+        
+        This code will expire in 10 minutes.
+        
+        If you did not request this code, please ignore this email.
+        """
         
         print(f"Attempting to send verification email to {email} via Gmail API")
         success = send_email_via_gmail(
@@ -264,7 +264,7 @@ def is_verified(email: str) -> bool:
         else:
             print(f"[AUTH] is_verified: {email} is verified (persisted)")
             return True
-
+    
     if not stored:
         print(f"[AUTH] is_verified: No verification record for {email}")
         return False
