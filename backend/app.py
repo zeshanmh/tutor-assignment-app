@@ -140,7 +140,9 @@ def verify_login():
     """Verify code and return JWT token"""
     data = request.get_json()
     email = data.get('email', '').lower().strip()
-    code = data.get('code', '')
+    code = data.get('code', '').strip()  # Strip whitespace from code
+    
+    print(f"[AUTH] Verifying code for {email}, code: '{code}' (length: {len(code)})")
     
     result = verify_code(email, code)
     if not result.get('verified'):

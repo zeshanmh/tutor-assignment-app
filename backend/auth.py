@@ -198,17 +198,29 @@ def request_verification_code(email: str) -> Dict[str, str]:
 def verify_code(email: str, code: str) -> Dict[str, any]:
     """Verify the code and return success status"""
     email = email.lower().strip()
+    code = code.strip()  # Strip whitespace from code
+    
+    print(f"[AUTH] verify_code: email='{email}', code='{code}' (length: {len(code)})")
+    print(f"[AUTH] verify_code: Available codes in memory: {list(verification_codes.keys())}")
     
     if email not in verification_codes:
-        return {'verified': False, 'error': 'No verification code requested'}
+        print(f"[AUTH] verify_code: ERROR - No verification code found for {email}")
+        print(f"[AUTH] verify_code: This might happen if the backend restarted. Request a new code.")
+        return {'verified': False, 'error': 'No verification code requested. Please request a new code.'}
     
     stored = verification_codes[email]
+    stored_code = stored['code']
+    expires_at = stored['expires_at']
     
-    if datetime.now() > stored['expires_at']:
+    print(f"[AUTH] verify_code: Stored code='{stored_code}' (length: {len(stored_code)}), expires_at={expires_at}")
+    
+    if datetime.now() > expires_at:
+        print(f"[AUTH] verify_code: Code expired (now: {datetime.now()}, expires: {expires_at})")
         del verification_codes[email]
-        return {'verified': False, 'error': 'Verification code expired'}
+        return {'verified': False, 'error': 'Verification code expired. Please request a new code.'}
     
-    if stored['code'] != code:
+    if stored_code != code:
+        print(f"[AUTH] verify_code: Code mismatch! Expected '{stored_code}', got '{code}'")
         return {'verified': False, 'error': 'Invalid verification code'}
     
     stored['verified'] = True

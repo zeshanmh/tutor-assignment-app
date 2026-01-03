@@ -7,6 +7,7 @@ from typing import List, Optional
 from flask import current_app
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google.auth.exceptions import RefreshError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -50,7 +51,23 @@ def get_gmail_service():
         
         # Refresh the token if needed
         if creds.expired or not creds.valid:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except RefreshError as e:
+                # Clear cached service so it can be retried after token is regenerated
+                _gmail_service = None
+                error_msg = str(e)
+                print(f"[GMAIL API] ERROR: Refresh token has expired or been revoked.")
+                print(f"[GMAIL API] Error details: {error_msg}")
+                print("[GMAIL API]")
+                print("[GMAIL API] To fix this, you need to regenerate your refresh token:")
+                print("[GMAIL API] 1. Run: python backend/setup_gmail_oauth.py")
+                print("[GMAIL API] 2. Follow the instructions to get a new refresh token")
+                print("[GMAIL API] 3. Update GMAIL_REFRESH_TOKEN in your .env file (local) or Railway variables (production)")
+                raise RefreshError(
+                    "Gmail refresh token has expired or been revoked. "
+                    "Please regenerate it by running: python backend/setup_gmail_oauth.py"
+                ) from e
         
         # Build Gmail service
         _gmail_service = build('gmail', 'v1', credentials=creds)
@@ -58,6 +75,9 @@ def get_gmail_service():
         
         return _gmail_service
     
+    except RefreshError:
+        # Re-raise refresh errors as-is (already handled above)
+        raise
     except Exception as e:
         print(f"[GMAIL API] Error initializing Gmail service: {type(e).__name__}: {e}")
         import traceback
@@ -121,10 +141,22 @@ def send_email_via_gmail(to_email: str, subject: str, body: str,
         print(f"[GMAIL API] Email sent successfully to {to_email} (Message ID: {message['id']})")
         return True
     
+    except RefreshError as e:
+        # Clear cached service so it can be retried after token is regenerated
+        global _gmail_service
+        _gmail_service = None
+        print(f"[GMAIL API] ERROR: Refresh token has expired or been revoked.")
+        print(f"[GMAIL API] Error details: {e}")
+        print("[GMAIL API]")
+        print("[GMAIL API] To fix this, regenerate your refresh token:")
+        print("[GMAIL API] 1. Run: python backend/setup_gmail_oauth.py")
+        print("[GMAIL API] 2. Update GMAIL_REFRESH_TOKEN in your environment variables")
+        return False
     except HttpError as e:
         print(f"[GMAIL API] HTTP Error: {e.status_code} - {e.reason}")
         if e.status_code == 401:
             print("[GMAIL API] Authentication failed. Check your OAuth2 credentials and refresh token.")
+            print("[GMAIL API] If the token expired, regenerate it with: python backend/setup_gmail_oauth.py")
         elif e.status_code == 403:
             print("[GMAIL API] Permission denied. Make sure the OAuth2 scope includes gmail.send")
         return False

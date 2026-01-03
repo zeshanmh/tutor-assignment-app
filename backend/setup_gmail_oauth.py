@@ -1,13 +1,18 @@
 """
-One-time script to set up Gmail OAuth2 and get refresh token.
+Script to set up Gmail OAuth2 and get/regenerate refresh token.
 
 This script helps you:
-1. Create OAuth2 credentials in Google Cloud Console
+1. Create OAuth2 credentials in Google Cloud Console (first time only)
 2. Get a refresh token for Gmail API access
-3. Set up environment variables for Railway
+3. Regenerate refresh token if it expires or is revoked
+4. Set up environment variables for Railway
 
 Run this script locally (not on Railway):
     python setup_gmail_oauth.py
+
+NOTE: If you're regenerating a token because it expired, you can reuse
+the same OAuth2 credentials (client_id and client_secret) from Google Cloud Console.
+You only need to download credentials.json again if you lost it.
 """
 
 import os
