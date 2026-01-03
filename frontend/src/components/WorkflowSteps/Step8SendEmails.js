@@ -142,7 +142,7 @@ Winthrop House Pre-Health Committee`,
 
       let savedTemplate;
       if (template.id) {
-        const result = await emailTemplatesAPI.update(template.id, template);
+        await emailTemplatesAPI.update(template.id, template);
         savedTemplate = { ...template };
       } else {
         // Try to find existing template by name first
@@ -151,7 +151,7 @@ Winthrop House Pre-Health Committee`,
         
         if (existing) {
           // Update existing template instead of creating new one
-          const result = await emailTemplatesAPI.update(existing.id, template);
+          await emailTemplatesAPI.update(existing.id, template);
           savedTemplate = { ...template, id: existing.id };
         } else {
           // Create new template
