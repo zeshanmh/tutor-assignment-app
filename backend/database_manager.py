@@ -868,17 +868,24 @@ class DatabaseManager:
         cursor = self._get_cursor(conn)
         placeholder = self._get_placeholder()
         placeholders = ', '.join([placeholder] * 3)
-        cursor.execute(f'''
-            INSERT INTO email_templates (name, subject, body, updated_at)
-            VALUES ({placeholders}, CURRENT_TIMESTAMP)
-        ''', (name, subject, body))
+        
         if self.is_postgresql:
-            template_id = cursor.fetchone()[0] if cursor.rowcount > 0 else None
-            # For PostgreSQL, we need to get the last inserted ID differently
-            cursor.execute("SELECT lastval()")
-            template_id = cursor.fetchone()[0]
+            # Use RETURNING clause for PostgreSQL to get the inserted ID
+            cursor.execute(f'''
+                INSERT INTO email_templates (name, subject, body, updated_at)
+                VALUES ({placeholders}, CURRENT_TIMESTAMP)
+                RETURNING id
+            ''', (name, subject, body))
+            result = cursor.fetchone()
+            template_id = result[0] if result else None
         else:
+            # SQLite uses lastrowid
+            cursor.execute(f'''
+                INSERT INTO email_templates (name, subject, body, updated_at)
+                VALUES ({placeholders}, CURRENT_TIMESTAMP)
+            ''', (name, subject, body))
             template_id = cursor.lastrowid
+        
         conn.commit()
         conn.close()
         return template_id
