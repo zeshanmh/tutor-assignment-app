@@ -877,7 +877,8 @@ class DatabaseManager:
                 RETURNING id
             ''', (name, subject, body))
             result = cursor.fetchone()
-            template_id = result[0] if result else None
+            # RealDictCursor returns a dictionary, so access by key
+            template_id = result['id'] if result else None
         else:
             # SQLite uses lastrowid
             cursor.execute(f'''
