@@ -91,13 +91,13 @@ Regards,
 Winthrop House Pre-Health Committee`,
         };
 
-        await Promise.all([
+        const [withNRTResult, withoutNRTResult] = await Promise.all([
           emailTemplatesAPI.create(defaultWithNRT),
           emailTemplatesAPI.create(defaultWithoutNRT),
         ]);
 
-        setTemplateWithNRT({ ...defaultWithNRT, id: 1 });
-        setTemplateWithoutNRT({ ...defaultWithoutNRT, id: 2 });
+        setTemplateWithNRT({ ...defaultWithNRT, id: withNRTResult.data.id });
+        setTemplateWithoutNRT({ ...defaultWithoutNRT, id: withoutNRTResult.data.id });
       } else {
         const withNRT = templatesRes.data.find(t => t.name === 'With NRT');
         const withoutNRT = templatesRes.data.find(t => t.name === 'Without NRT');
@@ -135,23 +135,49 @@ Winthrop House Pre-Health Committee`,
 
   const handleSaveTemplate = async (template) => {
     try {
-      if (template.id) {
-        await emailTemplatesAPI.update(template.id, template);
-      } else {
-        const result = await emailTemplatesAPI.create(template);
-        template.id = result.data.id;
+      if (!template.name || !template.subject || !template.body) {
+        alert('Please fill in all fields (name, subject, and body)');
+        return;
       }
 
-      if (template.name === 'With NRT') {
-        setTemplateWithNRT(template);
+      let savedTemplate;
+      if (template.id) {
+        const result = await emailTemplatesAPI.update(template.id, template);
+        savedTemplate = { ...template };
       } else {
-        setTemplateWithoutNRT(template);
+        // Try to find existing template by name first
+        const templatesRes = await emailTemplatesAPI.getAll();
+        const existing = templatesRes.data.find(t => t.name === template.name);
+        
+        if (existing) {
+          // Update existing template instead of creating new one
+          const result = await emailTemplatesAPI.update(existing.id, template);
+          savedTemplate = { ...template, id: existing.id };
+        } else {
+          // Create new template
+          const result = await emailTemplatesAPI.create(template);
+          savedTemplate = { ...template, id: result.data.id };
+        }
+      }
+
+      if (savedTemplate.name === 'With NRT') {
+        setTemplateWithNRT(savedTemplate);
+      } else {
+        setTemplateWithoutNRT(savedTemplate);
       }
 
       setEditingTemplate(null);
+      
+      // Reload templates to ensure we have the latest data
+      const templatesRes = await emailTemplatesAPI.getAll();
+      const withNRT = templatesRes.data.find(t => t.name === 'With NRT');
+      const withoutNRT = templatesRes.data.find(t => t.name === 'Without NRT');
+      if (withNRT) setTemplateWithNRT(withNRT);
+      if (withoutNRT) setTemplateWithoutNRT(withoutNRT);
     } catch (err) {
       console.error('Error saving template:', err);
-      alert('Failed to save template');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to save template';
+      alert(`Failed to save template: ${errorMessage}`);
     }
   };
 

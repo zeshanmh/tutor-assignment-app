@@ -958,43 +958,76 @@ def get_email_templates():
 @admin_required
 def create_email_template():
     """Create a new email template"""
-    init_database()
-    data = request.get_json()
-    
-    name = data.get('name', '').strip()
-    subject = data.get('subject', '').strip()
-    body = data.get('body', '').strip()
-    
-    if not name or not subject or not body:
-        return jsonify({'error': 'Name, subject, and body are required'}), 400
-    
     try:
+        init_database()
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        name = data.get('name', '').strip()
+        subject = data.get('subject', '').strip()
+        body = data.get('body', '').strip()
+        
+        print(f"[CREATE TEMPLATE] Received: name='{name}', subject length={len(subject)}, body length={len(body)}")
+        
+        if not name:
+            return jsonify({'error': 'Template name is required'}), 400
+        if not subject:
+            return jsonify({'error': 'Template subject is required'}), 400
+        if not body:
+            return jsonify({'error': 'Template body is required'}), 400
+        
+        # Check if template with this name already exists
+        existing_templates = db_manager.get_email_templates()
+        existing = next((t for t in existing_templates if t['name'].strip().lower() == name.lower()), None)
+        if existing:
+            return jsonify({'error': f'A template with the name "{name}" already exists. Use update instead.'}), 409
+        
         template_id = db_manager.add_email_template(name, subject, body)
+        print(f"[CREATE TEMPLATE] Successfully created template with ID: {template_id}")
         return jsonify({'id': template_id, 'message': 'Template created successfully'}), 201
     except Exception as e:
+        print(f"[CREATE TEMPLATE] Error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Failed to create template: {str(e)}'}), 500
 
 @app.route('/api/email-templates/<int:template_id>', methods=['PUT'])
 @admin_required
 def update_email_template(template_id):
     """Update an email template"""
-    init_database()
-    data = request.get_json()
-    
-    name = data.get('name', '').strip()
-    subject = data.get('subject', '').strip()
-    body = data.get('body', '').strip()
-    
-    if not name or not subject or not body:
-        return jsonify({'error': 'Name, subject, and body are required'}), 400
-    
     try:
+        init_database()
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        name = data.get('name', '').strip()
+        subject = data.get('subject', '').strip()
+        body = data.get('body', '').strip()
+        
+        print(f"[UPDATE TEMPLATE] ID={template_id}, name='{name}', subject length={len(subject)}, body length={len(body)}")
+        
+        if not name:
+            return jsonify({'error': 'Template name is required'}), 400
+        if not subject:
+            return jsonify({'error': 'Template subject is required'}), 400
+        if not body:
+            return jsonify({'error': 'Template body is required'}), 400
+        
         success = db_manager.update_email_template(template_id, name, subject, body)
         if success:
+            print(f"[UPDATE TEMPLATE] Successfully updated template ID: {template_id}")
             return jsonify({'message': 'Template updated successfully'}), 200
         else:
-            return jsonify({'error': 'Template not found'}), 404
+            print(f"[UPDATE TEMPLATE] Template ID {template_id} not found")
+            return jsonify({'error': f'Template with ID {template_id} not found'}), 404
     except Exception as e:
+        print(f"[UPDATE TEMPLATE] Error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Failed to update template: {str(e)}'}), 500
 
 @app.route('/api/email-templates/<int:template_id>', methods=['DELETE'])
