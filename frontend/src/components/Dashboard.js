@@ -165,11 +165,11 @@ function Dashboard() {
                 Sync with Google Sheets
               </Button>
             )}
-            <Button
+          <Button
               ref={workflowButtonRef}
-              variant="contained"
-              color="primary"
-              size="large"
+            variant="contained"
+            color="primary"
+            size="large"
               endIcon={<ArrowDropDownIcon />}
               onClick={(e) => {
                 setWorkflowMenuAnchor(e.currentTarget);
@@ -177,9 +177,9 @@ function Dashboard() {
                   setMenuWidth(workflowButtonRef.current.offsetWidth);
                 }
               }}
-            >
-              Start Workflow
-            </Button>
+          >
+            Start Workflow
+          </Button>
             <Menu
               anchorEl={workflowMenuAnchor}
               open={Boolean(workflowMenuAnchor)}

@@ -136,7 +136,7 @@ function WorkflowStep4({ onNext, onBack, onDataUpdate, initialData }) {
             newNrts: newNrts,
           });
         } else {
-          setNrts([...nrts, ...newNrts]);
+        setNrts([...nrts, ...newNrts]);
         }
       };
       reader.readAsText(file);

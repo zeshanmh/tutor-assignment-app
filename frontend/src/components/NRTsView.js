@@ -237,38 +237,38 @@ function NRTsView({ onUpdate }) {
               <MenuItem value="student_count">Student Count</MenuItem>
             </Select>
           </FormControl>
-          <Button
-            startIcon={<AddIcon />}
-            variant="contained"
-            onClick={() => handleOpenDialog()}
-          >
-            Add NRT
-          </Button>
+        <Button
+          startIcon={<AddIcon />}
+          variant="contained"
+          onClick={() => handleOpenDialog()}
+        >
+          Add NRT
+        </Button>
         </Box>
       </Box>
 
       {viewType === 'card' ? (
-        <Grid container spacing={2}>
+      <Grid container spacing={2}>
           {sortedNrts.map((nrt, index) => (
             <Grid item xs={12} sm={6} md={4} key={nrt.row_index || `nrt-${index}`}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6">{nrt.name}</Typography>
-                    <Box>
-                      <IconButton size="small" onClick={() => handleOpenDialog(nrt)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleDelete(nrt)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="h6">{nrt.name}</Typography>
+                  <Box>
+                    <IconButton size="small" onClick={() => handleOpenDialog(nrt)}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleDelete(nrt)}>
+                      <DeleteIcon />
+                    </IconButton>
                   </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {nrt.email}
-                  </Typography>
-                  <Box sx={{ mt: 1 }}>
-                    <Chip
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {nrt.email}
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Chip
                       label={nrt.status === 'active' ? 'Active' : 
                              nrt.status === 'pending approval' ? 'Pending Approval' :
                              nrt.status === 'active, but does not want additional students' ? 'Active (No New Students)' :
@@ -277,32 +277,32 @@ function NRTsView({ onUpdate }) {
                              nrt.status === 'pending approval' ? 'default' :
                              nrt.status === 'active, but does not want additional students' ? 'info' :
                              'warning'}
-                      size="small"
-                      sx={{ mr: 1 }}
-                    />
-                    <Chip
-                      label={`${nrt.total_students}/3 students`}
-                      color={nrt.total_students >= 3 ? 'error' : 'default'}
-                      size="small"
-                    />
+                    size="small"
+                    sx={{ mr: 1 }}
+                  />
+                  <Chip
+                    label={`${nrt.total_students}/3 students`}
+                    color={nrt.total_students >= 3 ? 'error' : 'default'}
+                    size="small"
+                  />
+                </Box>
+                {Object.keys(nrt.class_year_counts || {}).length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    {Object.entries(nrt.class_year_counts).map(([year, count]) => (
+                      <Chip
+                        key={year}
+                        label={`Class ${year}: ${count}`}
+                        size="small"
+                        sx={{ mr: 0.5, mb: 0.5 }}
+                      />
+                    ))}
                   </Box>
-                  {Object.keys(nrt.class_year_counts || {}).length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      {Object.entries(nrt.class_year_counts).map(([year, count]) => (
-                        <Chip
-                          key={year}
-                          label={`Class ${year}: ${count}`}
-                          size="small"
-                          sx={{ mr: 0.5, mb: 0.5 }}
-                        />
-                      ))}
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
       ) : (
         <TableContainer component={Paper}>
           <Table>

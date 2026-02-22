@@ -242,7 +242,7 @@ def is_verified(email: str) -> bool:
     
     print(f"[AUTH] is_verified: In-memory record: {bool(stored)}, Persisted record: {persisted}")
 
-    # Prefer persisted verification (survives restarts)
+    # Prefer persisted verification (`survives restarts)
     if persisted:
         verified_at = persisted.get('verified_at', datetime.now())
         if isinstance(verified_at, str):

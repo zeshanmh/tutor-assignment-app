@@ -190,47 +190,47 @@ function RTsView({ onUpdate }) {
               <MenuItem value="student_count">Student Count</MenuItem>
             </Select>
           </FormControl>
-          <Button
-            startIcon={<AddIcon />}
-            variant="contained"
-            onClick={() => handleOpenDialog()}
-          >
-            Add RT
-          </Button>
+        <Button
+          startIcon={<AddIcon />}
+          variant="contained"
+          onClick={() => handleOpenDialog()}
+        >
+          Add RT
+        </Button>
         </Box>
       </Box>
 
       {viewType === 'card' ? (
-        <Grid container spacing={2}>
+      <Grid container spacing={2}>
           {sortedRTs.map((rt) => (
-            <Grid item xs={12} sm={6} md={4} key={rt.row_index}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6">{rt.name}</Typography>
-                    <Box>
-                      <IconButton size="small" onClick={() => handleOpenDialog(rt)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleDelete(rt)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
+          <Grid item xs={12} sm={6} md={4} key={rt.row_index}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="h6">{rt.name}</Typography>
+                  <Box>
+                    <IconButton size="small" onClick={() => handleOpenDialog(rt)}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleDelete(rt)}>
+                      <DeleteIcon />
+                    </IconButton>
                   </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {rt.email}
-                  </Typography>
-                  <Chip
-                    label={`${rt.student_count} student(s)`}
-                    size="small"
-                    sx={{ mt: 1 }}
-                    color="primary"
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {rt.email}
+                </Typography>
+                <Chip
+                  label={`${rt.student_count} student(s)`}
+                  size="small"
+                  sx={{ mt: 1 }}
+                  color="primary"
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
       ) : (
         <TableContainer component={Paper}>
           <Table>

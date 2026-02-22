@@ -4,6 +4,14 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 
+
+def get_writable_cache_path() -> str:
+    """Use a path that is writable in production (e.g. Railway uses read-only app dir)."""
+    if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('DATABASE_URL'):
+        return os.path.join(os.environ.get('TMPDIR', '/tmp'), 'sync_cache.json')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sync_cache.json')
+
+
 class SyncCache:
     """Manages cache for sync operations to minimize API calls"""
     

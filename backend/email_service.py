@@ -48,7 +48,7 @@ If you are not planning to be pre-med anymore, please let us know as soon as pos
 
 Regards,
 Winthrop House Pre-Health Committee
-"""
+            """
         
         # Send email via Gmail API
         return send_email_via_gmail(

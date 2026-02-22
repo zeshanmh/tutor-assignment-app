@@ -1,7 +1,7 @@
 """Google Sheets sync operations with caching"""
 import gspread
 from google.oauth2.service_account import Credentials
-from typing import List, Optional
+from typing import List, Optional, Union, Dict, Any
 from models import Student, NonResidentTutor, ResidentTutor
 from database_manager import DatabaseManager
 from sync_cache import SyncCache
@@ -15,10 +15,13 @@ class SheetsSync:
         'https://www.googleapis.com/auth/drive'
     ]
     
-    def __init__(self, credentials_path: str, sheet_id: str, database_manager: DatabaseManager, 
-                 cache: SyncCache):
-        """Initialize Google Sheets sync"""
-        self.credentials_path = credentials_path
+    def __init__(self, credentials_path_or_info: Union[str, Dict[str, Any]], sheet_id: str,
+                 database_manager: DatabaseManager, cache: SyncCache):
+        """Initialize Google Sheets sync.
+        credentials_path_or_info: Either path to service account JSON file, or dict of credentials.
+        """
+        self.credentials_path = credentials_path_or_info if isinstance(credentials_path_or_info, str) else None
+        self.credentials_info = credentials_path_or_info if isinstance(credentials_path_or_info, dict) else None
         self.sheet_id = sheet_id
         self.database_manager = database_manager
         self.cache = cache
@@ -29,10 +32,16 @@ class SheetsSync:
     def _connect(self):
         """Establish connection to Google Sheets"""
         try:
-            creds = Credentials.from_service_account_file(
-                self.credentials_path,
-                scopes=self.SCOPES
-            )
+            if self.credentials_info is not None:
+                creds = Credentials.from_service_account_info(
+                    self.credentials_info,
+                    scopes=self.SCOPES
+                )
+            else:
+                creds = Credentials.from_service_account_file(
+                    self.credentials_path,
+                    scopes=self.SCOPES
+                )
             self.client = gspread.authorize(creds)
             self.spreadsheet = self.client.open_by_key(self.sheet_id)
         except Exception as e:

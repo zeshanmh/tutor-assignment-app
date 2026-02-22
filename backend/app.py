@@ -6,7 +6,7 @@ from datetime import timedelta
 from config import Config
 from database_manager import DatabaseManager
 from sheets_sync import SheetsSync
-from sync_cache import SyncCache
+from sync_cache import SyncCache, get_writable_cache_path
 from auth import request_verification_code, verify_code, is_verified, clear_verification
 from email_service import send_assignment_email, send_bulk_assignment_emails
 from models import Student, NonResidentTutor, ResidentTutor
@@ -63,29 +63,37 @@ def init_sheets_sync():
     credentials_json = app.config.get('GOOGLE_CREDENTIALS_JSON')
     sheets_id = app.config.get('GOOGLE_SHEETS_ID')
     
-    # Support both file path and base64-encoded JSON
+    # Support file path, base64-encoded JSON, or raw JSON string
     if not sheets_sync and sheets_id and (credentials_path or credentials_json):
         try:
-            # Ensure database is initialized first
             init_database()
-            
-            # If base64 JSON is provided, decode and write to temp file
-            if credentials_json and not credentials_path:
+            credentials_input = None
+
+            if credentials_json:
                 import base64
-                import tempfile
-                decoded_credentials = base64.b64decode(credentials_json).decode('utf-8')
-                # Create temporary file for credentials
-                temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-                temp_file.write(decoded_credentials)
-                temp_file.close()
-                credentials_path = temp_file.name
-            
+                raw = credentials_json.strip()
+                try:
+                    decoded = base64.b64decode(raw).decode('utf-8')
+                except Exception:
+                    decoded = raw
+                credentials_input = json.loads(decoded)
+            elif credentials_path:
+                if os.path.isfile(credentials_path):
+                    credentials_input = credentials_path
+                else:
+                    raise ValueError(f"Credentials file not found: {credentials_path}")
+            else:
+                credentials_input = None
+
+            if not credentials_input:
+                raise ValueError("Google credentials not found: set GOOGLE_CREDENTIALS_JSON (base64 or JSON) or GOOGLE_CREDENTIALS_PATH")
+
             cache = SyncCache(
-                cache_file_path=os.path.join(os.path.dirname(__file__), 'sync_cache.json'),
+                cache_file_path=get_writable_cache_path(),
                 cache_expiry_seconds=app.config.get('SYNC_CACHE_EXPIRY', 300)
             )
             sheets_sync = SheetsSync(
-                credentials_path,
+                credentials_input,
                 sheets_id,
                 db_manager,
                 cache
@@ -893,41 +901,50 @@ def get_stats():
 @admin_required
 def sync_to_sheets():
     """Sync database to Google Sheets"""
-    init_database()
-    init_sheets_sync()
-    
-    if not sheets_sync:
-        return jsonify({'error': 'Google Sheets sync not configured. Please set GOOGLE_SHEETS_ID and GOOGLE_CREDENTIALS_PATH in .env'}), 400
-    
-    data = request.get_json() or {}
-    force = data.get('force', False)
-    
-    result = sheets_sync.sync_to_sheets(force=force)
-    
-    if result['success']:
-        return jsonify(result), 200
-    else:
-        return jsonify(result), 500
+    try:
+        init_database()
+        init_sheets_sync()
+
+        if not sheets_sync:
+            return jsonify({'error': 'Google Sheets sync not configured. Set GOOGLE_SHEETS_ID and GOOGLE_CREDENTIALS_JSON (or GOOGLE_CREDENTIALS_PATH) in environment.'}), 400
+
+        data = request.get_json() or {}
+        force = data.get('force', False)
+
+        result = sheets_sync.sync_to_sheets(force=force)
+
+        if result.get('success'):
+            return jsonify(result), 200
+        return jsonify({'error': result.get('message', 'Sync failed'), 'success': False}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e), 'success': False}), 500
+
 
 @app.route('/api/sync/from-sheets', methods=['POST'])
 @admin_required
 def sync_from_sheets():
     """Sync Google Sheets to database"""
-    init_database()
-    init_sheets_sync()
-    
-    if not sheets_sync:
-        return jsonify({'error': 'Google Sheets sync not configured. Please set GOOGLE_SHEETS_ID and GOOGLE_CREDENTIALS_PATH in .env'}), 400
-    
-    data = request.get_json() or {}
-    force = data.get('force', False)
-    
-    result = sheets_sync.sync_from_sheets(force=force)
-    
-    if result['success']:
-        return jsonify(result), 200
-    else:
-        return jsonify(result), 500
+    try:
+        init_database()
+        init_sheets_sync()
+
+        if not sheets_sync:
+            return jsonify({'error': 'Google Sheets sync not configured. Set GOOGLE_SHEETS_ID and GOOGLE_CREDENTIALS_JSON (or GOOGLE_CREDENTIALS_PATH) in environment.'}), 400
+
+        data = request.get_json() or {}
+        force = data.get('force', False)
+
+        result = sheets_sync.sync_from_sheets(force=force)
+
+        if result.get('success'):
+            return jsonify(result), 200
+        return jsonify({'error': result.get('message', 'Sync failed'), 'success': False}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/api/sync/status', methods=['GET'])
 @admin_required

@@ -350,30 +350,30 @@ function StudentsView({ onUpdate }) {
       </Box>
 
       {viewType === 'card' ? (
-        <Grid container spacing={2}>
+      <Grid container spacing={2}>
           {sortedStudents.map((student, index) => (
             <Grid item xs={12} sm={6} md={4} key={student.row_index || `student-${index}`}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6">
-                      {student.first_name} {student.last_name}
-                    </Typography>
-                    <Box>
-                      <IconButton size="small" onClick={() => handleOpenDialog(student)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleDelete(student)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {student.primary_email}
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="h6">
+                    {student.first_name} {student.last_name}
                   </Typography>
-                  {student.class_year && (
-                    <Chip label={`Class ${student.class_year}`} size="small" sx={{ mt: 1, mr: 1 }} />
-                  )}
+                  <Box>
+                    <IconButton size="small" onClick={() => handleOpenDialog(student)}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleDelete(student)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {student.primary_email}
+                </Typography>
+                {student.class_year && (
+                  <Chip label={`Class ${student.class_year}`} size="small" sx={{ mt: 1, mr: 1 }} />
+                )}
                   {student.status && (
                     <Chip 
                       label={student.status} 
@@ -383,17 +383,17 @@ function StudentsView({ onUpdate }) {
                              student.status === 'Applying Next Cycle' ? 'info' : 'default'}
                     />
                   )}
-                  {student.rt_assignment && (
-                    <Chip label={`RT: ${student.rt_assignment}`} size="small" sx={{ mt: 1, mr: 1 }} />
-                  )}
-                  {student.nrt_assignment && (
-                    <Chip label={`NRT: ${student.nrt_assignment}`} size="small" sx={{ mt: 1 }} />
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                {student.rt_assignment && (
+                  <Chip label={`RT: ${student.rt_assignment}`} size="small" sx={{ mt: 1, mr: 1 }} />
+                )}
+                {student.nrt_assignment && (
+                  <Chip label={`NRT: ${student.nrt_assignment}`} size="small" sx={{ mt: 1 }} />
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
       ) : (
         <TableContainer component={Paper}>
           <Table>

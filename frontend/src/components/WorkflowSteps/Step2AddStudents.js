@@ -162,7 +162,7 @@ function WorkflowStep2({ onNext, onBack, onDataUpdate, initialData }) {
             newStudents: newStudents,
           });
         } else {
-          setStudents([...students, ...newStudents]);
+        setStudents([...students, ...newStudents]);
         }
       };
       reader.readAsText(file);
